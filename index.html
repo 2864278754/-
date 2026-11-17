@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#04030a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Merry Christmas · 粒子圣诞树</title>
+<style>
+  :root{
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{
+    position:fixed;inset:0;
+    width:100%;height:100%;overflow:hidden;
+    background:#04030a;
+    font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none;
+    -webkit-user-select:none;user-select:none;
+    overscroll-behavior:none;
+    touch-action:none;
+  }
+  #scene{
+    position:fixed;inset:0;display:block;
+    width:100%;height:100%;
+    touch-action:none;cursor:crosshair;
+  }
+
+  /* ---------- 祝福语 ---------- */
+  .greet{
+    position:fixed;left:0;right:0;
+    bottom:calc(5.2% + var(--safe-b));
+    z-index:5;pointer-events:none;
+    display:flex;flex-direction:column;align-items:center;gap:.1em;
+    padding:0 12px;
+    opacity:0;transform:translateY(28px) scale(.96);
+    transition:opacity 1.5s ease,transform 1.5s cubic-bezier(.16,.8,.24,1);
+  }
+  .greet::before{
+    content:"";position:absolute;left:50%;top:50%;width:min(130vw,1100px);height:200%;
+    transform:translate(-50%,-50%);pointer-events:none;z-index:-1;
+    background:radial-gradient(ellipse at center,rgba(0,0,0,.62) 0%,rgba(0,0,0,.32) 38%,rgba(0,0,0,0) 72%);
+  }
+  .greet.show{opacity:1;transform:none}
+  .merry{
+    font-family:"Segoe Script","Brush Script MT","Monotype Corsiva","Lucida Handwriting",cursive;
+    /* 手机上按宽度与高度取小值，横竖屏都不会溢出 */
+    font-size:clamp(26px,min(8.6vw,7.2vh),76px);
+    line-height:1.16;padding:0 .1em;
+    white-space:nowrap;
+    background:linear-gradient(180deg,#fffdf0 6%,#ffe9b0 34%,#ffc861 62%,#d98b2a 100%);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent;
+    filter:drop-shadow(0 0 10px rgba(255,205,120,.8)) drop-shadow(0 0 30px rgba(255,155,45,.5));
+    animation:breathe 4.2s ease-in-out infinite;
+  }
+  .sub{
+    font-family:"Songti SC","STSong","Noto Serif SC",serif;
+    font-size:clamp(11px,min(3.4vw,2.7vh),24px);
+    letter-spacing:.5em;text-indent:.5em;
+    color:#ffe6ae;
+    text-shadow:0 0 10px rgba(255,190,90,.9),0 0 26px rgba(255,150,40,.6),0 0 54px rgba(255,120,20,.35);
+  }
+  @keyframes breathe{
+    0%,100%{filter:drop-shadow(0 0 8px rgba(255,205,120,.7)) drop-shadow(0 0 26px rgba(255,155,45,.45))}
+    50%{filter:drop-shadow(0 0 16px rgba(255,220,150,.95)) drop-shadow(0 0 44px rgba(255,165,55,.62))}
+  }
+
+  /* ---------- 粉色主题 ---------- */
+  body.pink .merry{
+    background:linear-gradient(180deg,#ffffff 4%,#ffe4fa 30%,#ff92e2 64%,#cf4fb6 100%);
+    -webkit-background-clip:text;background-clip:text;
+    filter:drop-shadow(0 0 10px rgba(255,170,240,.9)) drop-shadow(0 0 32px rgba(232,70,190,.55));
+  }
+  body.pink .sub{color:#ffd8f7;text-shadow:0 0 10px rgba(255,150,235,.95),0 0 28px rgba(230,80,200,.65),0 0 60px rgba(160,40,160,.45)}
+  body.pink .merry{animation:breatheP 4.2s ease-in-out infinite}
+  @keyframes breatheP{
+    0%,100%{filter:drop-shadow(0 0 10px rgba(255,150,235,.8)) drop-shadow(0 0 34px rgba(232,70,190,.55)) drop-shadow(0 0 76px rgba(170,40,170,.3))}
+    50%{filter:drop-shadow(0 0 20px rgba(255,190,245,1)) drop-shadow(0 0 56px rgba(240,100,200,.75)) drop-shadow(0 0 110px rgba(170,40,170,.5))}
+  }
+
+  /* ---------- 控件 ---------- */
+  .ui{
+    position:fixed;
+    top:calc(16px + var(--safe-t));
+    right:calc(16px + var(--safe-r));
+    z-index:9;display:flex;gap:8px;
+  }
+  .ui button{
+    appearance:none;border:1px solid rgba(255,225,170,.28);
+    background:rgba(30,20,10,.34);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    color:#ffe6b8;font-size:12.5px;letter-spacing:.06em;
+    padding:8px 14px;border-radius:999px;cursor:pointer;
+    min-height:34px;line-height:1;
+    transition:.25s ease;font-family:inherit;
+    touch-action:manipulation;
+  }
+  .ui button:active{transform:scale(.94);background:rgba(90,60,20,.55)}
+  .ui button:hover{border-color:rgba(255,225,170,.65);background:rgba(70,45,15,.5);color:#fff6e0;box-shadow:0 0 18px rgba(255,190,90,.35)}
+  .hint{
+    position:fixed;left:0;right:0;
+    bottom:calc(10px + var(--safe-b));
+    z-index:9;text-align:center;
+    font-size:11.5px;letter-spacing:.14em;color:rgba(255,232,196,.42);
+    pointer-events:none;transition:opacity .6s ease;
+    padding:0 16px;
+  }
+  body.pink .hint{color:rgba(255,214,246,.45)}
+  body.pink .ui button{border-color:rgba(255,180,240,.28);background:rgba(30,10,30,.4);color:#ffd8f7}
+  body.pink .ui button:hover{border-color:rgba(255,180,240,.7);background:rgba(70,20,60,.5);box-shadow:0 0 18px rgba(240,110,210,.4)}
+
+  /* ---------- 手机 / 触屏 ---------- */
+  @media (max-width:760px), (pointer:coarse){
+    .ui{top:calc(10px + var(--safe-t));right:calc(10px + var(--safe-r));gap:6px}
+    .ui button{padding:8px 12px;font-size:12px;min-height:36px;min-width:44px}
+    .greet{bottom:calc(9% + var(--safe-b))}
+    .hint{font-size:10.5px;letter-spacing:.12em;bottom:calc(8px + var(--safe-b))}
+  }
+  @media (max-height:460px){
+    .greet{bottom:calc(3% + var(--safe-b))}
+    .merry{font-size:clamp(22px,min(6.4vw,9vh),46px)}
+    .hint{display:none}
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div class="greet" id="greet">
+  <div class="merry">Merry Christmas</div>
+  <div class="sub">圣诞快乐</div>
+</div>
+
+<div class="ui">
+  <button id="btnTheme" title="切换主题">金色</button>
+  <button id="btnFire">烟花</button>
+  <button id="btnReplay">重播</button>
+</div>
+<div class="hint" id="hint"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =========================================================
+     0. 基础工具
+     ========================================================= */
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const lerp  = (a, b, t) => a + (b - a) * t;
+  const rnd   = (a, b) => a + Math.random() * (b - a);
+  const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+  const easeOutQuart = (t) => 1 - Math.pow(1 - t, 4);
+  const TAU = Math.PI * 2;
+
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const greet = document.getElementById('greet');
+
+  let W = 0, H = 0, DPR = 1;
+  let QUALITY = 1;                 // 手机等小屏降低粒子密度
+  const IS_TOUCH = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+
+  /* =========================================================
+     1. 主题（金色 / 粉色）—— 对应你给的两段视频
+     ========================================================= */
+  const THEMES = {
+    gold: {
+      key: 'gold',
+      bgTop: '#0a0703',
+      bgBot: '#020203',
+      nebula: [
+        { x: .50, y: .78, r: 1.05, c: [255, 150,  60, .13] },
+        { x: .18, y: .30, r: .70, c: [255, 120,  40, .05] },
+        { x: .84, y: .38, r: .62, c: [255, 180,  90, .05] },
+        { x: .50, y: .50, r: .95, c: [120,  90, 200, .04] }
+      ],
+      starC: '255,238,190',
+      foliage: ['255,206,120', '255,228,168', '255,176, 84', '255,244,214'],
+      garland: ['255,232,168', '255,196, 96', '255,252,232'],
+      ornament: ['255, 96, 78', '116,255,176', '255,214,120', '150,206,255', '255,255,255'],
+      spark: '255,246,214',
+      fw: ['255,214,130', '255,246,210', '255,170, 70', '180,210,255'],
+      dust: '255,226,170',
+      ground: [255, 176, 86],
+      exposure: 0.47,
+      tree: { tiers: 9, r0: 0.80, profile: 1.12, droop: 0.210, rim: 175, fill: 620, tassel: 52 },
+      counts: { garland: 2, ornaments: 150, dust: 620 }
+    },
+    pink: {
+      key: 'pink',
+      bgTop: '#10061a',
+      bgBot: '#04020a',
+      nebula: [
+        { x: .50, y: .62, r: 1.15, c: [190,  55, 190, .18] },
+        { x: .26, y: .34, r: .80, c: [120,  40, 200, .12] },
+        { x: .78, y: .46, r: .72, c: [235,  70, 180, .10] },
+        { x: .50, y: .18, r: .70, c: [ 90,  40, 190, .10] }
+      ],
+      starC: '255,244,255',
+      foliage: ['255,126,222', '255,178,240', '226, 96,255', '255,226,252'],
+      garland: ['255,196,248', '255,120,220', '255,246,255'],
+      ornament: ['255,255,255', '255,170,244', '206,130,255', '255, 96,190', '180,230,255'],
+      spark: '255,236,255',
+      fw: ['255,150,240', '255,226,255', '212,120,255', '180,200,255'],
+      dust: '255,190,246',
+      ground: [226, 110, 220],
+      exposure: 0.40,
+      tree: { tiers: 9, r0: 0.76, profile: 0.95, droop: 0.170, rim: 200, fill: 620, tassel: 56 },
+      counts: { garland: 2, ornaments: 170, dust: 720 }
+    }
+  };
+
+  const state = {
+    theme: 'gold',
+    time: 0,
+    t0: 0,
+    rot: 0,
+    rotV: 0.115,
+    mouseX: 0, mouseY: 0,      // -1 .. 1 (缓动后)
+    targetX: 0, targetY: 0,
+    starFlare: 0,
+    starIn: 0,
+    groundIn: 0,
+    introDone: false,
+    startOverlay: 0,           // 开场渐亮
+    nextFw: 4.4
+  };
+
+  let theme = THEMES[state.theme];
+
+  /* =========================================================
+     2. 精灵（预渲染发光点，配合 lighter 叠加出光晕）
+     ========================================================= */
+  const spriteCache = new Map();
+  function glowSprite(rgb) {
+    let s = spriteCache.get(rgb);
+    if (s) return s;
+    const S = 64;
+    const c = document.createElement('canvas');
+    c.width = c.height = S;
+    const g = c.getContext('2d');
+    const grd = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    grd.addColorStop(0.00, 'rgba(' + rgb + ',1)');
+    grd.addColorStop(0.12, 'rgba(' + rgb + ',0.92)');
+    grd.addColorStop(0.30, 'rgba(' + rgb + ',0.34)');
+    grd.addColorStop(0.58, 'rgba(' + rgb + ',0.09)');
+    grd.addColorStop(1.00, 'rgba(' + rgb + ',0)');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, S, S);
+    spriteCache.set(rgb, c);
+    return c;
+  }
+
+  /* =========================================================
+     3. 场景数据
+     ========================================================= */
+  let pts = [];        // 树的粒子
+  let dust = [];       // 开场星系
+  let snow = [];       // 飘雪 / 尘埃
+  let fireworks = [];  // 烟花
+  let rings = [];      // 地面光环
+  let arcs = [];       // 环绕光弧
+  let tierInfo = [];   // 每层树冠 {y, r}，用来画层间光晕
+  let bgCanvas = null;
+
+  const cx = () => W * 0.5 + state.mouseX * W * 0.012;
+  // 竖屏把树纵向拉长一点；横屏保持真实比例
+  const SY = () => (H > W ? 1.20 : 1.0);
+  // 按“顶部留白 + 底部文字区”可用高度来定树的大小，任何屏幕都不会压到文字
+  const scaleOf = () => {
+    const sy = SY();
+    const topPad = H * 0.085;
+    // 底部预留要包含裙边下垂的高度，否则树底会压到文字
+    const botPad = H * (H > W ? 0.210 : (H < 460 ? 0.200 : 0.205));
+    const availH = Math.max(120, H - topPad - botPad);
+    return Math.min((availH * 0.94) / (2 * sy), W * (H > W ? 0.520 : 0.420));
+  };
+  const cy = () => H * 0.085 + scaleOf() * SY() + state.mouseY * H * 0.010;
+  const FOCAL = 3.1;
+
+  function makeParticle(x, y, z, size, rgb, role) {
+    const rt = Math.hypot(x, z);
+    const at = Math.atan2(z, x);
+    const r0 = rt + rnd(0.55, 1.95);
+    const yn = clamp((y + 1) / 2, 0, 1);
+    return {
+      x, y, z, size, spr: glowSprite(rgb), role,
+      wx: 0, wy: 0, wz: 0,
+      done: false,
+      delay: rnd(0.05, 1.7) + (1 - yn) * 0.22,
+      dur: rnd(0.7, 1.25),
+      a0: at + rnd(-1.7, 1.7),
+      r0: r0,
+      y0: y + rnd(-0.4, 0.7),
+      rt: rt,
+      at: at,
+      swirl: rnd(0.9, 2.6) * (Math.random() < 0.5 ? -1 : 1),
+      tw: Math.random() * TAU,
+      twS: rnd(1.4, 3.4),
+      twA: rnd(0.18, 0.62),
+      a: 0
+    };
+  }
+
+  function buildScene() {
+    const C = theme.counts;
+    pts = [];
+    dust = [];
+    snow = [];
+    rings = [];
+    arcs = [];
+    tierInfo = [];
+
+    /* ---- 3.1 分层树冠：一层层向外下垂的“裙边” ---- */
+    const T = theme.tree;
+    const TIERS = T.tiers;
+    const tierH = 2 / TIERS;
+    const tierY = (i) => -1 + (i + 0.55) * tierH;
+    const tierR = (i) => T.r0 * Math.pow(1 - i / TIERS, T.profile);
+
+    for (let i = 0; i < TIERS; i++) {
+      const yc = tierY(i);
+      const R = tierR(i);
+      const f = 1 - i / TIERS;                       // 越靠顶部粒子越少
+      tierInfo.push({ y: yc, r: R });
+
+      // (a) 外缘亮环：这一层下垂的裙边，最亮也最密
+      const rimN = Math.round(T.rim * (0.45 + 0.55 * f) * QUALITY);
+      for (let k = 0; k < rimN; k++) {
+        const ang = Math.random() * TAU;
+        const u = 0.86 + 0.16 * Math.pow(Math.random(), 0.6);
+        const rr = R * u * rnd(0.99, 1.015);
+        const sag = T.droop * Math.pow(u, 1.9);
+        const yy = yc - sag + rnd(-0.008, 0.006);
+        const rgb = Math.random() < 0.40
+          ? theme.foliage[(Math.random() * theme.foliage.length) | 0]
+          : theme.garland[(Math.random() * theme.garland.length) | 0];
+        const p = makeParticle(Math.cos(ang) * rr, yy, Math.sin(ang) * rr, rnd(0.0075, 0.0155), rgb, 'rim');
+        p.delay = rnd(0.05, 1.5) + (1 - (yy + 1) / 2) * 0.32;
+        pts.push(p);
+      }
+
+      // (a2) 层缘的细亮边：让每一层的轮廓更清晰
+      const edgeN = Math.max(12, Math.round((46 + 74 * f) * QUALITY));
+      for (let k = 0; k < edgeN; k++) {
+        const ang = (k / edgeN) * TAU + rnd(-0.06, 0.06);
+        const rr = R * rnd(0.995, 1.008);
+        const yy = yc - T.droop + rnd(-0.004, 0.005);
+        const rgb = theme.garland[(Math.random() * theme.garland.length) | 0];
+        const p = makeParticle(Math.cos(ang) * rr, yy, Math.sin(ang) * rr, rnd(0.0055, 0.0105), rgb, 'rim');
+        p.delay = rnd(0.1, 1.6) + (1 - (yy + 1) / 2) * 0.3;
+        pts.push(p);
+      }
+
+      // (b) 层面：沿着一根根枝条向外铺开，形成放射状枝纹
+      const fillN = Math.round(T.fill * (0.5 + 0.5 * f) * QUALITY);
+      const nb = 7 + Math.round(15 * f);
+      const bAng = [];
+      for (let b = 0; b < nb; b++) bAng.push(Math.random() * TAU + (b / nb) * TAU * 0.35);
+      for (let k = 0; k < fillN; k++) {
+        const b = (Math.random() * nb) | 0;
+        const ang = bAng[b] + rnd(-0.075, 0.075);
+        const u = 0.12 + 0.84 * Math.pow(Math.random(), 0.72);
+        const rr = R * u;
+        const sag = T.droop * Math.pow(u, 1.9) * 0.9;
+        const yy = yc - sag + rnd(-0.030, 0.012);
+        const rgb = theme.foliage[(Math.random() * theme.foliage.length) | 0];
+        const p = makeParticle(Math.cos(ang) * rr, yy, Math.sin(ang) * rr, rnd(0.0045, 0.0115), rgb, 'leaf');
+        p.delay = rnd(0.05, 1.7) + (1 - (yy + 1) / 2) * 0.32;
+        pts.push(p);
+      }
+
+      // (c) 枝梢垂下的流苏
+      const tasN = Math.round(T.tassel * f * QUALITY) + 3;
+      for (let k = 0; k < tasN; k++) {
+        const ang = Math.random() * TAU;
+        const rr = R * rnd(0.90, 1.02);
+        const yy = yc - T.droop * rnd(0.95, 1.35) - rnd(0, 0.07);
+        const rgb = theme.garland[(Math.random() * theme.garland.length) | 0];
+        const p = makeParticle(Math.cos(ang) * rr, yy, Math.sin(ang) * rr, rnd(0.0045, 0.010), rgb, 'tassel');
+        p.delay = rnd(0.2, 2.0);
+        pts.push(p);
+      }
+
+      // (d) 每层裙边上挑一段加亮，相位逐层错开 → 看起来像一条螺旋灯带
+      const phase = i * 0.95 + rnd(-0.35, 0.35);
+      const arcN = Math.round(rimN * 0.55);
+      for (let k = 0; k < arcN; k++) {
+        const ang = phase + Math.random() * 2.1;
+        const u = 0.90 + 0.11 * Math.random();
+        const rr = R * u * rnd(0.995, 1.012);
+        const sag = T.droop * Math.pow(u, 1.9);
+        const yy = yc - sag + rnd(-0.006, 0.004);
+        const rgb = theme.garland[(Math.random() * theme.garland.length) | 0];
+        const p = makeParticle(Math.cos(ang) * rr, yy, Math.sin(ang) * rr, rnd(0.008, 0.0165), rgb, 'garland');
+        p.delay = rnd(0.15, 1.7) + (1 - (yy + 1) / 2) * 0.3;
+        pts.push(p);
+      }
+    }
+
+    /* ---- 3.2 树芯光柱 ---- */
+    const spineN = Math.round(260 * QUALITY);
+    for (let i = 0; i < spineN; i++) {
+      const t = Math.random();
+      const yy = -1 + t * 1.96;
+      const rr = 0.012 + rnd(0, 0.038);
+      const ang = Math.random() * TAU;
+      const rgb = theme.garland[(Math.random() * theme.garland.length) | 0];
+      const p = makeParticle(Math.cos(ang) * rr, yy, Math.sin(ang) * rr, rnd(0.0035, 0.009), rgb, 'spine');
+      p.delay = rnd(0.1, 2.2);
+      pts.push(p);
+    }
+
+    /* ---- 3.3 顶部细长尖梢 ---- */
+    const spireN = Math.round(230 * QUALITY);
+    for (let i = 0; i < spireN; i++) {
+      const t = Math.pow(Math.random(), 0.75);
+      const yy = 0.40 + t * 0.63;
+      const k = 1 - (yy - 0.40) / 0.63;
+      const rr = (0.105 * k + 0.003) * rnd(0.25, 1.15);
+      const ang = Math.random() * TAU;
+      const rgb = theme.garland[(Math.random() * theme.garland.length) | 0];
+      const p = makeParticle(Math.cos(ang) * rr, yy, Math.sin(ang) * rr, rnd(0.0045, 0.011), rgb, 'spire');
+      p.delay = rnd(0.4, 2.3);
+      pts.push(p);
+    }
+
+    /* ---- 3.4 彩球：挂在每层裙边下面 ---- */
+    const ornN = Math.round(C.ornaments * QUALITY);
+    for (let i = 0; i < ornN; i++) {
+      const tier = (Math.random() * TIERS) | 0;
+      const yc = tierY(tier);
+      const R = tierR(tier);
+      const u = rnd(0.66, 1.0);
+      const ang = Math.random() * TAU;
+      const rr = R * u;
+      const yy = yc - T.droop * Math.pow(u, 1.9) - rnd(0.015, 0.055);
+      const rgb = theme.ornament[(Math.random() * theme.ornament.length) | 0];
+      const p = makeParticle(Math.cos(ang) * rr, yy, Math.sin(ang) * rr, rnd(0.018, 0.034), rgb, 'ornament');
+      p.delay = rnd(0.6, 2.6);
+      p.twS = rnd(0.7, 1.8);
+      p.twA = rnd(0.25, 0.5);
+      pts.push(p);
+    }
+
+    /* ---- 3.4 树顶星（单独绘制，这里只做定位） ---- */
+
+    /* ---- 3.5 开场星系 ---- */
+    const dustN = Math.round(C.dust * QUALITY);
+    for (let i = 0; i < dustN; i++) {
+      const a = Math.random() * TAU;
+      const r = rnd(0.85, 3.1);
+      dust.push({
+        a, r,
+        w: rnd(-0.55, 0.55),
+        y: rnd(-0.7, 1.0) + (1 - r / 3.1) * 0.25,
+        size: rnd(0.004, 0.011),
+        spr: glowSprite(theme.dust),
+        tw: Math.random() * TAU
+      });
+    }
+
+    /* ---- 3.6 飘雪 / 浮尘 ---- */
+    const snowN = Math.round(clamp(W * H / 16000, 40, 160) * (0.55 + 0.45 * QUALITY));
+    for (let i = 0; i < snowN; i++) snow.push(newSnow(true));
+
+    /* ---- 3.7 地面光环 + 环绕光弧 ---- */
+    for (let i = 0; i < 3; i++) rings.push({ phase: i / 3, speed: 0.26 });
+    for (let i = 0; i < 4; i++) {
+      arcs.push({
+        a0: Math.random() * TAU,
+        r: rnd(0.62, 0.92),
+        speed: rnd(0.05, 0.12) * (Math.random() < 0.5 ? -1 : 1),
+        len: rnd(0.5, 1.4),
+        tilt: rnd(0.82, 1.18),
+        alpha: rnd(0.05, 0.13)
+      });
+    }
+  }
+
+  function newSnow(initial) {
+    return {
+      x: Math.random() * W,
+      y: initial ? Math.random() * H : -20,
+      r: rnd(0.5, 2.2),
+      vy: rnd(8, 26),
+      vx: rnd(-8, 8),
+      ph: Math.random() * TAU,
+      a: rnd(0.16, 0.6),
+      spr: glowSprite(Math.random() < 0.25 ? theme.spark : theme.dust),
+      big: Math.random() < 0.06
+    };
+  }
+
+  /* =========================================================
+     4. 背景（暗场 + 星云 + 星点 + 暗角），一次性烘焙
+     ========================================================= */
+  function buildBackground() {
+    bgCanvas = document.createElement('canvas');
+    bgCanvas.width = Math.max(1, Math.floor(W * DPR));
+    bgCanvas.height = Math.max(1, Math.floor(H * DPR));
+    const g = bgCanvas.getContext('2d');
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    const lin = g.createLinearGradient(0, 0, 0, H);
+    lin.addColorStop(0, theme.bgTop);
+    lin.addColorStop(1, theme.bgBot);
+    g.fillStyle = lin;
+    g.fillRect(0, 0, W, H);
+
+    // 星云
+    g.globalCompositeOperation = 'lighter';
+    const M = Math.max(W, H);
+    for (const n of theme.nebula) {
+      const R = n.r * M * 0.62;
+      const grd = g.createRadialGradient(n.x * W, n.y * H, 0, n.x * W, n.y * H, R);
+      grd.addColorStop(0, 'rgba(' + n.c.join(',') + ')');
+      grd.addColorStop(0.55, 'rgba(' + n.c[0] + ',' + n.c[1] + ',' + n.c[2] + ',' + (n.c[3] * 0.35) + ')');
+      grd.addColorStop(1, 'rgba(' + n.c[0] + ',' + n.c[1] + ',' + n.c[2] + ',0)');
+      g.fillStyle = grd;
+      g.fillRect(0, 0, W, H);
+    }
+
+    // 背景星点
+    const starN = Math.round(W * H / 5200);
+    for (let i = 0; i < starN; i++) {
+      const x = Math.random() * W, y = Math.random() * H;
+      const a = Math.pow(Math.random(), 2.2) * 0.75 + 0.05;
+      const r = Math.random() < 0.9 ? rnd(0.4, 1.0) : rnd(1.0, 1.8);
+      g.fillStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+      g.beginPath();
+      g.arc(x, y, r, 0, TAU);
+      g.fill();
+    }
+
+    // 暗角
+    g.globalCompositeOperation = 'source-over';
+    const vg = g.createRadialGradient(W * 0.5, H * 0.52, Math.min(W, H) * 0.25, W * 0.5, H * 0.52, Math.max(W, H) * 0.78);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.82)');
+    g.fillStyle = vg;
+    g.fillRect(0, 0, W, H);
+  }
+
+  /* =========================================================
+     5. 尺寸（手机：跟着可视区域走，地址栏收起时不重建粒子）
+     ========================================================= */
+  function viewportW() {
+    return Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || 1));
+  }
+  function viewportH() {
+    return Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || 1));
+  }
+
+  function computeQuality() {
+    const short = Math.min(W, H);
+    let q = 1;
+    if (short < 500) q = 0.60;          // 手机竖屏
+    else if (short < 620) q = 0.72;
+    else if (short < 780) q = 0.86;     // 小平板 / 分屏窗口
+    if (IS_TOUCH) q *= 0.94;
+    return q;
+  }
+
+  let bgW = 0, bgH = 0;
+  function resize(rebuild) {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    const prevW = W, prevH = H;
+    W = viewportW();
+    H = viewportH();
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    // 背景是按像素烘焙的：宽度变了或高度变化较大才重画，
+    // 手机地址栏收放时只轻微拉伸旧背景，避免每帧重绘
+    if (!bgCanvas || Math.abs(W - bgW) > 2 || Math.abs(H - bgH) > 70) {
+      buildBackground();
+      bgW = W; bgH = H;
+    }
+    if (rebuild) {
+      QUALITY = computeQuality();
+      buildScene();
+    }
+  }
+
+  // 只在宽度/比例变化明显时重建粒子，避免手机地址栏收放导致整棵树重来
+  let resizeTimer = 0;
+  function applyResize() {
+    const w = viewportW(), h = viewportH();
+    if (w === W && h === H) return;
+    const aspectOld = H > 0 ? W / H : 1;
+    const aspectNew = w / h;
+    const needRebuild = Math.abs(w - W) > 24 || Math.abs(aspectNew - aspectOld) > 0.20;
+    const tNow = state.time;
+    resize(needRebuild);
+    if (needRebuild && tNow > 4) {
+      // 重建后直接呈现成形状态
+      for (const p of pts) { p.done = true; p.wx = p.x; p.wy = p.y; p.wz = p.z; p.a = 1; }
+      state.introDone = true;
+      greet.classList.add('show');
+    }
+  }
+  function scheduleResize() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(applyResize, 140);
+  }
+
+  /* =========================================================
+     6. 烟花
+     ========================================================= */
+  function burst(x, y, opt) {
+    opt = opt || {};
+    const n = Math.max(42, Math.round((opt.n || (100 + (Math.random() * 50 | 0))) * Math.max(0.6, QUALITY)));
+    const parts = [];
+    const speedBase = Math.min(H, W) * (opt.power || 0.46);
+    const core = theme.spark;
+    const sizeK = Math.max(0.8, Math.min(H, W) / 900);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * TAU;
+      const u = Math.random();
+      const sp = speedBase * (0.10 + 0.90 * Math.pow(u, 1.7));
+      const rgb = Math.random() < 0.24 ? core : theme.fw[(Math.random() * theme.fw.length) | 0];
+      parts.push({
+        x: 0, y: 0,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp,
+        life: rnd(0.95, 1.7),
+        age: 0,
+        size: rnd(2.2, 4.2) * sizeK,
+        rgb: 'rgba(' + rgb + ',',
+        spr: glowSprite(rgb)
+      });
+    }
+    fireworks.push({ x, y, parts, age: 0, life: 2.0, flash: 1, ring: 0 });
+  }
+
+  function launchRocket() {
+    const x = rnd(W * 0.12, W * 0.88);
+    fireworks.push({
+      rocket: true,
+      x, y: H * rnd(0.98, 1.05),
+      vy: -Math.min(H, W) * rnd(0.62, 0.85),
+      target: H * rnd(0.10, 0.42),
+      age: 0,
+      trail: [],
+      spr: glowSprite(theme.spark)
+    });
+  }
+
+  /* =========================================================
+     7. 每帧更新
+     ========================================================= */
+  function update(dt) {
+    const t = state.time;
+
+    // 鼠标缓动
+    state.mouseX += (state.targetX - state.mouseX) * Math.min(1, dt * 3.2);
+    state.mouseY += (state.targetY - state.mouseY) * Math.min(1, dt * 3.2);
+
+    // 旋转
+    state.rot += (state.rotV + state.mouseX * 0.22) * dt;
+
+    // 星星闪光衰减
+    state.starFlare = Math.max(0, state.starFlare - dt * 0.85);
+
+    // 树成形后才点亮星星与地面光
+    state.starIn = clamp((t - 3.05) / 0.55, 0, 1);
+    state.groundIn = clamp((t - 0.9) / 1.8, 0, 1);
+
+    // 粒子从星系汇聚到树
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      if (p.done) continue;
+      const prog = clamp((t - p.delay) / p.dur, 0, 1);
+      if (prog >= 1) {
+        p.wx = p.x; p.wy = p.y; p.wz = p.z;
+        p.done = true; p.a = 1;
+        continue;
+      }
+      const k = easeOutCubic(prog);
+      const ang = lerp(p.a0, p.at, k) + (1 - k) * p.swirl;
+      const r = lerp(p.r0, p.rt, k);
+      p.wx = Math.cos(ang) * r;
+      p.wz = Math.sin(ang) * r;
+      p.wy = lerp(p.y0, p.y, k);
+      p.a = clamp(prog * 5.5, 0, 1);
+    }
+
+    // 烟花
+    for (let i = fireworks.length - 1; i >= 0; i--) {
+      const f = fireworks[i];
+      f.age += dt;
+      if (f.rocket) {
+        f.y += f.vy * dt;
+        f.vy *= Math.pow(0.985, dt * 60);
+        f.trail.push({ x: f.x, y: f.y, a: 1 });
+        if (f.trail.length > 16) f.trail.shift();
+        for (const tr of f.trail) tr.a *= 0.9;
+        if (f.y <= f.target || f.vy > -20) {
+          burst(f.x, f.y, { n: 80 + (Math.random() * 40 | 0) });
+          fireworks.splice(i, 1);
+        }
+        continue;
+      }
+      f.ring += dt;
+      let alive = 0;
+      for (const p of f.parts) {
+        p.age += dt;
+        if (p.age > p.life) continue;
+        alive++;
+        const drag = Math.pow(0.972, dt * 60);
+        p.vx *= drag; p.vy *= drag;
+        p.vy += Math.min(H, W) * 0.055 * dt;   // 重力
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+      }
+      if (alive === 0) fireworks.splice(i, 1);
+    }
+
+    // 自动放烟花
+    if (state.introDone && t > state.nextFw) {
+      state.nextFw = t + rnd(0.9, 1.9);
+      const r = Math.random();
+      if (r < 0.20) {
+        launchRocket();
+        setTimeout(() => { if (state.introDone) launchRocket(); }, 260);
+      } else if (r < 0.55) {
+        launchRocket();
+      } else {
+        burst(rnd(W * 0.18, W * 0.82), rnd(H * 0.12, H * 0.38));
+        if (Math.random() < 0.35) burst(rnd(W * 0.15, W * 0.85), rnd(H * 0.10, H * 0.30));
+      }
+    }
+
+    // 雪
+    for (const s of snow) {
+      s.y += s.vy * dt;
+      s.x += (s.vx + Math.sin(t * 0.6 + s.ph) * 9) * dt;
+      if (s.y > H + 20) { Object.assign(s, newSnow(false)); }
+      if (s.x < -20) s.x = W + 20;
+      if (s.x > W + 20) s.x = -20;
+    }
+  }
+
+  /* =========================================================
+     8. 绘制
+     ========================================================= */
+  function drawDust() {
+    const fade = clamp(1 - (state.time - 0.35) / 2.4, 0, 1);
+    if (fade <= 0.001) return;
+    const c = cx(), y0 = cy(), S = scaleOf();
+    const rot = state.rot * 0.65;
+    for (const d of dust) {
+      const ang = d.a + state.time * d.w + rot;
+      const x = Math.cos(ang) * d.r;
+      const z = Math.sin(ang) * d.r;
+      const persp = FOCAL / (FOCAL + z * 1.2);
+      const sx = c + x * S * persp;
+      const sy = y0 - d.y * S * persp;
+      const r = Math.max(0.8, d.size * S * 3.4 * persp) * (0.75 + 0.25 * Math.sin(state.time * 3 + d.tw));
+      ctx.globalAlpha = fade * 0.55 * (0.4 + 0.6 * persp);
+      ctx.drawImage(d.spr, sx - r, sy - r, r * 2, r * 2);
+    }
+  }
+
+  function drawTree() {
+    const c = cx(), y0 = cy(), S = scaleOf();
+    const YS = S * SY();
+    const rot = state.rot;
+    const cosR = Math.cos(rot), sinR = Math.sin(rot);
+    const t = state.time;
+    const E = theme.exposure;
+
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const px = p.wx * cosR - p.wz * sinR;
+      const pz = p.wx * sinR + p.wz * cosR;
+      const persp = FOCAL / (FOCAL + pz);
+      const sx = c + px * S * persp;
+      if (sx < -60 || sx > W + 60) continue;
+      const sy = y0 - p.wy * YS * persp;
+      if (sy < -60 || sy > H + 60) continue;
+
+      const tw = 0.5 + 0.5 * Math.sin(t * p.twS + p.tw);
+      let a = p.a * E * (0.34 + 0.66 * persp) * (0.45 + 0.55 * tw);
+      let r = p.size * S * persp * (0.80 + 0.45 * tw);
+
+      if (p.role === 'ornament') {
+        a *= 1.35;
+        r *= 1.15;
+      } else if (p.role === 'rim') {
+        a *= 1.55;
+      } else if (p.role === 'garland') {
+        a *= 1.30;
+      } else if (p.role === 'tassel') {
+        a *= 1.18;
+      } else if (p.role === 'spire') {
+        a *= 1.25;
+      } else if (p.role === 'spine') {
+        a *= 0.85;
+        r *= 0.85;
+      }
+
+      // 汇聚阶段拖尾（只给一部分粒子画，保证帧率）
+      if (!p.done && p.a > 0.05 && (p.role !== 'leaf' || (i & 3) === 0)) {
+        const k2 = clamp((t - p.delay) / p.dur, 0, 1);
+        if (k2 > 0.02) {
+          const ang2 = lerp(p.a0, p.at, easeOutCubic(Math.max(0, k2 - 0.05))) + (1 - k2) * p.swirl;
+          const r2 = lerp(p.r0, p.rt, Math.max(0, k2 - 0.05));
+          const bx = Math.cos(ang2) * r2, bz = Math.sin(ang2) * r2, by = lerp(p.y0, p.y, Math.max(0, k2 - 0.05));
+          const bxr = bx * cosR - bz * sinR, bzr = bx * sinR + bz * cosR;
+          const bp = FOCAL / (FOCAL + bzr);
+          const bsx = c + bxr * S * bp, bsy = y0 - by * YS * bp;
+          let dx = sx - bsx, dy = sy - bsy;
+          const dist = Math.hypot(dx, dy);
+          if (dist > 1.2) {
+            // 拖尾限制长度，避免拉成满屏的长划痕
+            const maxLen = Math.min(90, 14 + r * 8);
+            let tx0 = bsx, ty0 = bsy;
+            if (dist > maxLen) {
+              tx0 = sx - dx / dist * maxLen;
+              ty0 = sy - dy / dist * maxLen;
+            }
+            const lg = ctx.createLinearGradient(tx0, ty0, sx, sy);
+            lg.addColorStop(0, 'rgba(255,255,255,0)');
+            lg.addColorStop(1, 'rgba(255,236,190,' + (0.20 * a).toFixed(3) + ')');
+            ctx.strokeStyle = lg;
+            ctx.lineWidth = Math.max(0.5, r * 0.25);
+            ctx.beginPath();
+            ctx.moveTo(tx0, ty0);
+            ctx.lineTo(sx, sy);
+            ctx.stroke();
+          }
+        }
+      }
+
+      ctx.globalAlpha = clamp(a, 0, 1);
+      ctx.drawImage(p.spr, sx - r, sy - r, r * 2, r * 2);
+
+      // 彩球外圈光晕
+      if (p.role === 'ornament') {
+        const hr = r * 3.4;
+        ctx.globalAlpha = clamp(a * 0.30, 0, 0.5);
+        ctx.drawImage(p.spr, sx - hr, sy - hr, hr * 2, hr * 2);
+      }
+    }
+  }
+
+  function drawStar() {
+    const sIn = state.starIn;
+    if (sIn <= 0.01) return;
+    const c = cx(), y0 = cy(), S = scaleOf();
+    const sy = y0 - 1.055 * S * SY();
+    const flare = state.starFlare;
+    const pulse = 0.88 + 0.12 * Math.sin(state.time * 2.1);
+    const base = S * 0.085 * pulse * (1 + flare * 0.9);
+
+    ctx.globalCompositeOperation = 'lighter';
+
+    // 中心光晕
+    const spr = glowSprite(theme.starC);
+    ctx.globalAlpha = sIn;
+    let hr = base * (4.2 + 5.5 * flare);
+    ctx.drawImage(spr, c - hr, sy - hr, hr * 2, hr * 2);
+
+    // 菱形星芒（4 长 + 4 短）
+    ctx.save();
+    ctx.translate(c, sy);
+    ctx.rotate(state.time * 0.06 + flare * 0.5);
+    for (let i = 0; i < 8; i++) {
+      const ang = i * Math.PI / 4;
+      const isMain = i % 2 === 0;
+      const len = base * ((isMain ? 5.2 : 2.6) + Math.sin(state.time * 1.6 + i * 1.7) * 1.1) * (1 + flare * 1.4);
+      const w = (isMain ? 2.6 : 1.4) * (1 + flare * 0.8);
+      const grd = ctx.createLinearGradient(0, 0, Math.cos(ang) * len, Math.sin(ang) * len);
+      grd.addColorStop(0, 'rgba(255,255,240,' + (0.95 * (0.6 + 0.4 * pulse)).toFixed(3) + ')');
+      grd.addColorStop(0.35, 'rgba(255,236,186,' + (0.42).toFixed(3) + ')');
+      grd.addColorStop(1, 'rgba(255,200,120,0)');
+      ctx.strokeStyle = grd;
+      ctx.lineWidth = w;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(ang) * len, Math.sin(ang) * len);
+      ctx.stroke();
+    }
+    // 横向镜头光条
+    const lensW = base * (8.5 + flare * 12);
+    const lg = ctx.createLinearGradient(-lensW, 0, lensW, 0);
+    lg.addColorStop(0, 'rgba(255,220,150,0)');
+    lg.addColorStop(0.5, 'rgba(255,248,225,' + (0.55 + flare * 0.35).toFixed(3) + ')');
+    lg.addColorStop(1, 'rgba(255,220,150,0)');
+    ctx.strokeStyle = lg;
+    ctx.lineWidth = Math.max(1.2, base * 0.16);
+    ctx.beginPath();
+    ctx.moveTo(-lensW, 0);
+    ctx.lineTo(lensW, 0);
+    ctx.stroke();
+    ctx.restore();
+
+    // 星芒爆发：柔和的二次光晕（不使用硬边圆环）
+    if (flare > 0.01) {
+      const rr = base * (3.2 + (1 - flare) * 9);
+      ctx.globalAlpha = flare * 0.5 * sIn;
+      ctx.drawImage(spr, c - rr, sy - rr, rr * 2, rr * 2);
+    }
+  }
+
+  function drawHalo() {
+    if (state.groundIn <= 0.01) return;
+    const c = cx(), y0 = cy(), S = scaleOf();
+    const g0 = theme.ground;
+    const gi = state.groundIn;
+
+    // 每层树冠的“盘面”辉光：让层与层之间透出光，像视频里的分层光带
+    const ys = SY();
+    for (let i = 0; i < tierInfo.length; i++) {
+      const t = tierInfo[i];
+      const sx = c, sy = y0 - t.y * S * ys;
+      const rx = t.r * S * 1.02, ry = Math.max(2, t.r * S * 0.30 * ys);
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.scale(1, ry / rx);
+      const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+      grd.addColorStop(0, 'rgba(' + g0.join(',') + ',' + (0.075 * gi).toFixed(3) + ')');
+      grd.addColorStop(0.72, 'rgba(' + g0.join(',') + ',' + (0.055 * gi).toFixed(3) + ')');
+      grd.addColorStop(1, 'rgba(' + g0.join(',') + ',0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(0, 0, rx, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(c, y0 - S * 0.02);
+    ctx.scale(1, 1.18);
+    const grd = ctx.createRadialGradient(0, 0, S * 0.05, 0, 0, S * 1.05);
+    grd.addColorStop(0, 'rgba(' + g0.join(',') + ',' + (0.16 * gi).toFixed(3) + ')');
+    grd.addColorStop(0.45, 'rgba(' + g0.join(',') + ',' + (0.06 * gi).toFixed(3) + ')');
+    grd.addColorStop(1, 'rgba(' + g0.join(',') + ',0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(0, 0, S * 1.05, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawGround() {
+    if (state.groundIn <= 0.01) return;
+    const c = cx(), S = scaleOf();
+    const y0 = cy() + S * 1.0 * SY();
+    const g0 = theme.ground;
+
+    // 地面光晕
+    ctx.save();
+    ctx.translate(c, y0);
+    ctx.scale(1, 0.20);
+    const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, S * 1.25);
+    grd.addColorStop(0, 'rgba(' + g0.join(',') + ',' + (0.22 * state.groundIn).toFixed(3) + ')');
+    grd.addColorStop(0.45, 'rgba(' + g0.join(',') + ',' + (0.07 * state.groundIn).toFixed(3) + ')');
+    grd.addColorStop(1, 'rgba(' + g0.join(',') + ',0)');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(0, 0, S * 1.25, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+
+    // 向外扩散的光环
+    for (const rg of rings) {
+      const ph = ((state.time * rg.speed) + rg.phase) % 1;
+      const rr = S * (0.55 + ph * 0.95);
+      ctx.globalAlpha = (1 - ph) * 0.13 * state.groundIn;
+      ctx.strokeStyle = 'rgba(' + g0.join(',') + ',1)';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.ellipse(c, y0, rr, rr * 0.20, 0, 0, TAU);
+      ctx.stroke();
+    }
+  }
+
+  function drawArcs() {
+    if (theme.key !== 'pink') return;
+    const c = cx(), y0 = cy(), S = scaleOf() * 1.55;
+    for (const a of arcs) {
+      const start = a.a0 + state.time * a.speed;
+      ctx.globalAlpha = a.alpha;
+      ctx.strokeStyle = 'rgba(255,190,246,1)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(c, y0 - S * 0.05, S * a.r, S * a.r * 0.34 * a.tilt, 0, start, start + a.len);
+      ctx.stroke();
+    }
+  }
+
+  function drawFireworks() {
+    for (const f of fireworks) {
+      if (f.rocket) {
+        for (let i = 0; i < f.trail.length; i++) {
+          const tr = f.trail[i];
+          const r = 2.2 + i * 0.22;
+          ctx.globalAlpha = clamp(tr.a * 0.45, 0, 1);
+          ctx.drawImage(f.spr, tr.x - r, tr.y - r, r * 2, r * 2);
+        }
+        ctx.globalAlpha = 0.95;
+        const r = 4.5;
+        ctx.drawImage(f.spr, f.x - r, f.y - r, r * 2, r * 2);
+        continue;
+      }
+
+      // 爆发瞬间的白色闪光 + 扩散光圈
+      if (f.age < 0.14) {
+        const k = 1 - f.age / 0.14;
+        const R = Math.min(H, W) * (0.035 + 0.115 * (1 - k));
+        ctx.globalAlpha = k * 0.62;
+        ctx.drawImage(glowSprite(theme.spark), f.x - R, f.y - R, R * 2, R * 2);
+      }
+      if (f.ring < 0.5) {
+        const k = f.ring / 0.5;
+        const R = 10 + k * Math.min(H, W) * 0.07;
+        ctx.globalAlpha = (1 - k) * (1 - k) * 0.5;
+        ctx.drawImage(glowSprite(theme.spark), f.x - R, f.y - R, R * 2, R * 2);
+      }
+
+      for (const p of f.parts) {
+        if (p.age > p.life) continue;
+        const k = p.age / p.life;
+        const a = Math.pow(1 - k, 1.7);
+        const r = p.size * (1 - k * 0.35);
+        const px = f.x + p.x, py = f.y + p.y;
+
+        // 运动拖尾
+        const tl = 0.03;
+        ctx.globalAlpha = clamp(a * 0.55, 0, 1);
+        ctx.strokeStyle = p.rgb + clamp(a * 0.5, 0, 1).toFixed(3) + ')';
+        ctx.lineWidth = Math.max(0.7, r * 0.45);
+        ctx.beginPath();
+        ctx.moveTo(px - p.vx * tl, py - p.vy * tl);
+        ctx.lineTo(px, py);
+        ctx.stroke();
+
+        // 光点
+        ctx.globalAlpha = clamp(a, 0, 1);
+        ctx.drawImage(p.spr, px - r * 1.6, py - r * 1.6, r * 3.2, r * 3.2);
+        if (p.age < p.life * 0.4) {
+          ctx.globalAlpha = clamp(a * 0.22, 0, 1);
+          const rr = r * 6;
+          ctx.drawImage(p.spr, px - rr, py - rr, rr * 2, rr * 2);
+        }
+      }
+    }
+  }
+
+  function drawSnow() {
+    const t = state.time;
+    for (const s of snow) {
+      const r = s.big ? s.r * 5 : s.r;
+      const a = s.a * (s.big ? 0.35 : 0.9) * (0.7 + 0.3 * Math.sin(t * 1.3 + s.ph));
+      ctx.globalAlpha = clamp(a, 0, 1);
+      ctx.drawImage(s.spr, s.x - r, s.y - r, r * 2, r * 2);
+    }
+  }
+
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    if (bgCanvas) ctx.drawImage(bgCanvas, 0, 0, W, H);
+
+    ctx.globalCompositeOperation = 'lighter';
+    drawArcs();
+    drawHalo();
+    drawGround();
+    drawDust();
+    drawTree();
+    drawStar();
+    drawFireworks();
+    drawSnow();
+
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+  }
+
+  /* =========================================================
+     9. 主循环
+     ========================================================= */
+  let lastTs = 0;
+  function loop(ts) {
+    if (!lastTs) lastTs = ts;
+    let dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+    dt = Math.min(dt, 0.05);
+    state.time += dt;
+
+    // 手机地址栏收放、横竖屏切换有时不触发 resize，这里兜底检查
+    const dw = Math.abs(viewportW() - W), dh = Math.abs(viewportH() - H);
+    if (dw || dh) {
+      // 宽度变化（横竖屏）立即生效；只是高度微调（地址栏动画）则等停稳再处理
+      if (dw > 24 || dh > 40) applyResize();
+      else scheduleResize();
+    }
+
+    update(dt);
+    draw();
+
+    requestAnimationFrame(loop);
+  }
+
+  /* =========================================================
+     10. 交互 & 控制
+     ========================================================= */
+  function reset(hard) {
+    state.time = 0;
+    state.nextFw = 4.2;
+    state.introDone = false;
+    state.starFlare = 0;
+    state.rot = Math.random() * TAU;
+    greet.classList.remove('show');
+    buildScene();
+
+    clearTimeout(reset._t1);
+    clearTimeout(reset._t2);
+    reset._t1 = setTimeout(() => {
+      state.starFlare = 1;
+      burst(cx(), cy() - scaleOf() * 1.055 * SY(), { n: 120, power: 0.45 });
+    }, 3250);
+    reset._t2 = setTimeout(() => {
+      greet.classList.add('show');
+      state.introDone = true;
+      state.nextFw = state.time + 1.2;
+    }, 3550);
+  }
+
+  function setTheme(name) {
+    if (state.theme === name) return;
+    state.theme = name;
+    theme = THEMES[name];
+    document.body.classList.toggle('pink', name === 'pink');
+    document.getElementById('btnTheme').textContent = name === 'pink' ? '粉色' : '金色';
+    buildBackground();
+    spriteCache.clear();
+    buildScene();
+  }
+
+  /* ---------- 尺寸变化：手机地址栏、横竖屏、软键盘 ---------- */
+  window.addEventListener('resize', scheduleResize);
+  window.addEventListener('orientationchange', () => setTimeout(scheduleResize, 350));
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', scheduleResize);
+  }
+
+  /* ---------- 鼠标视差（触屏忽略，避免手指滑动时抖动） ---------- */
+  window.addEventListener('pointermove', (e) => {
+    if (e.pointerType && e.pointerType !== 'mouse') return;
+    state.targetX = (e.clientX / W) * 2 - 1;
+    state.targetY = (e.clientY / H) * 2 - 1;
+  }, { passive: true });
+
+  /* ---------- 点按放烟花 ---------- */
+  canvas.addEventListener('pointerdown', (e) => {
+    burst(e.clientX, e.clientY, { n: 100, power: 0.6 });
+  });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  window.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 't') setTheme(state.theme === 'gold' ? 'pink' : 'gold');
+    if (k === 'r') reset();
+    if (e.code === 'Space') { e.preventDefault(); launchRocket(); }
+  });
+
+  document.getElementById('btnTheme').addEventListener('click', () => {
+    setTheme(state.theme === 'gold' ? 'pink' : 'gold');
+  });
+  document.getElementById('btnFire').addEventListener('click', () => {
+    burst(rnd(W * 0.25, W * 0.75), rnd(H * 0.15, H * 0.35), { n: 110, power: 0.62 });
+  });
+  document.getElementById('btnReplay').addEventListener('click', () => reset());
+
+  /* =========================================================
+     11. 启动
+     ========================================================= */
+  const params = new URLSearchParams(location.search);
+  if (params.get('theme') === 'pink') {
+    state.theme = 'pink';
+    theme = THEMES.pink;
+    document.body.classList.add('pink');
+    document.getElementById('btnTheme').textContent = '粉色';
+  }
+  const skipIntro = params.get('skip') === '1';
+  const atParam = parseFloat(params.get('at') || '0');
+
+  // 触屏和桌面给不同的操作提示
+  document.getElementById('hint').textContent = IS_TOUCH
+    ? '轻点画面放烟花 · 右上角切换主题'
+    : '点击画面放烟花 · T 切换主题 · R 重新播放';
+
+  resize(true);
+  state.rot = Math.random() * TAU;
+
+  if (skipIntro) {
+    // 用于截图/预览：直接呈现成形状态
+    for (const p of pts) { p.done = true; p.wx = p.x; p.wy = p.y; p.wz = p.z; p.a = 1; }
+    state.time = 6;
+    state.introDone = true;
+    greet.classList.add('show');
+    burst(W * 0.28, H * 0.22, { n: 90 });
+    burst(W * 0.72, H * 0.30, { n: 80 });
+  } else {
+    reset();
+  }
+
+  // 调试/预览：跳到时间轴的指定秒数
+  if (atParam > 0) {
+    state.time = atParam;
+    if (atParam > 3.5) {
+      greet.classList.add('show');
+      state.introDone = true;
+      state.nextFw = atParam - 0.2;
+    }
+    update(0);
+    draw();
+  }
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
